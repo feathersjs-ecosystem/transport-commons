@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { convertFilterData, promisify, errorObject } from '../src/utils';
+import { convertFilterData, promisify, normalizeError } from '../src/utils';
 
 describe('utils', () => {
   it('convertFilterData', () => {
@@ -42,15 +42,16 @@ describe('utils', () => {
     });
   });
 
-  it('errorObject', () => {
+  it('normalizeError', () => {
     const e = new Error('Testing');
+    e.hook = 'test';
     e.expando = true;
 
-    const obj = errorObject(e);
-    delete obj.stack;
+    const obj = normalizeError(e);
 
     assert.ok(typeof obj === 'object');
     assert.ok(!(obj instanceof Error));
+    assert.ok(typeof obj.hook === 'undefined');
     assert.deepEqual(obj, {
       message: 'Testing',
       expando: true
