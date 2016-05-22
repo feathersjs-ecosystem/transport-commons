@@ -11,10 +11,10 @@ function socketMixin(service) {
 
   service.mixin({
     setup(app, path) {
-      if(!this._socketSetup) {
+      if (!this._socketSetup) {
         const info = app._socketInfo;
-        const mountpath = (app.mountpath !== '/' && typeof app.mountpath === 'string') ?
-            app.mountpath : '';
+        const isSubApp = app.mountpath !== '/' && typeof app.mountpath === 'string';
+        const mountpath =  isSubApp ? app.mountpath : '';
         const fullPath = stripSlashes(`${mountpath}/${path}`);
         const setupSocket = socket => {
           setupMethodHandlers.call(app, info, socket, fullPath, this);
@@ -47,7 +47,8 @@ export default function mixin() {
   app.mixins.push(socketMixin);
   app.mixins.push(filterMixin);
 
-  // When mounted as a sub-app, override the parent setup so you don't have to call it
+  // When mounted as a sub-app, override the parent setup to call our
+  // own setup so the developer doesn't need to call it explicitly.
   app.on('mount', parent => {
     const oldSetup = parent.setup;
 
