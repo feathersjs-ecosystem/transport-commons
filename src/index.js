@@ -41,23 +41,26 @@ function socketMixin(service) {
   });
 }
 
-export default function mixin() {
-  const app = this;
+export default function createMixin(property) {
+  return function mixin() {
+    const app = this;
 
-  app.mixins.push(socketMixin);
-  app.mixins.push(filterMixin);
+    app.mixins.push(socketMixin);
+    app.mixins.push(filterMixin);
 
-  // When mounted as a sub-app, override the parent setup to call our
-  // own setup so the developer doesn't need to call it explicitly.
-  app.on('mount', parent => {
-    const oldSetup = parent.setup;
+    // When mounted as a sub-app, override the parent setup to call our
+    // own setup so the developer doesn't need to call it explicitly.
+    app.on('mount', parent => {
+      const oldSetup = parent.setup;
 
-    parent.setup = function(... args) {
-      const result = oldSetup.apply(this, args);
-      app.setup(... args);
-      return result;
-    };
-  });
+      parent.setup = function(... args) {
+        const result = oldSetup.apply(this, args);
+        app[property] = parent[property];
+        app.setup(... args);
+        return result;
+      };
+    });
+  };
 }
 
-mixin.socketMixin = socketMixin;
+createMixin.socketMixin = socketMixin;
