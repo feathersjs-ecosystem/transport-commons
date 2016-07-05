@@ -12,10 +12,6 @@ export default class Service {
     this.timeout = options.timeout || 5000;
   }
 
-  emit(... args) {
-    this.connection[this.method](... args);
-  }
-
   send(method, ...args) {
     let callback = null;
     if (typeof args[args.length - 1] === 'function') {
@@ -69,14 +65,58 @@ export default class Service {
   remove(id, params = {}) {
     return this.send('remove', id, params.query || {});
   }
+
+  off(... args) {
+    if(typeof this.connection.off === 'function') {
+      return this.connection.off(... args);
+    } else if(args.length === 1) {
+      return this.removeAllListeners(... args);
+    }
+
+    return this.removeEventListener(... args);
+  }
 }
 
-const emitterMethods = ['on', 'once', 'off'];
+const namespacedEmitterMethods = [
+  'addListener',
+  'emit',
+  'listenerCount',
+  'listeners',
+  'on',
+  'once',
+  'prependListener',
+  'prependOnceListener',
+  'removeAllListeners',
+  'removeListener'
+];
 
-emitterMethods.forEach(method => {
-  Service.prototype[method] = function(name, callback) {
-    debug(`Calling emitter method ${method} with event '${this.path} ${name}'`);
-    this.connection[method](`${this.path} ${name}`, callback);
-    return this;
+const otherEmitterMethods = [
+  'eventNames',
+  'getMaxListeners',
+  'setMaxListeners'
+];
+
+otherEmitterMethods.forEach(method => {
+  Service.prototype[method] = function(...args) {
+    if(typeof this.connection[method] !== 'function') {
+      throw new Error(`Can not call method '${method}' on the client connection.`);
+    }
+
+    return this.connection[method](...args);
+  };
+});
+
+namespacedEmitterMethods.forEach(method => {
+  Service.prototype[method] = function(name, ...args) {
+    if(typeof this.connection[method] !== 'function') {
+      throw new Error(`Can not call method '${method}' on the client connection.`);
+    }
+
+    const eventName = `${this.path} ${name}`;
+
+    debug(`Calling emitter method ${method} with namespaced event '${eventName}'`);
+    const result = this.connection[method](eventName, ...args);
+
+    return result === this.connection ? this : result;
   };
 });
