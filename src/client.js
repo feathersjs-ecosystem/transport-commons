@@ -2,6 +2,52 @@ import { events } from './utils';
 import { convert } from 'feathers-errors';
 
 const debug = require('debug')('feathers-socket-commons:client');
+const namespacedEmitterMethods = [
+  'addListener',
+  'emit',
+  'listenerCount',
+  'listeners',
+  'on',
+  'once',
+  'prependListener',
+  'prependOnceListener',
+  'removeAllListeners',
+  'removeListener'
+];
+const otherEmitterMethods = [
+  'eventNames',
+  'getMaxListeners',
+  'setMaxListeners'
+];
+
+const addEmitterMethods = service => {
+  otherEmitterMethods.forEach(method => {
+    if(typeof service.connection[method] !== 'function') {
+      return;
+    }
+
+    service[method] = function(...args) {
+      return this.connection[method](...args);
+    };
+  });
+
+  namespacedEmitterMethods.forEach(method => {
+    if(typeof service.connection[method] !== 'function') {
+      return;
+    }
+
+    service[method] = function(name, ...args) {
+      const eventName = `${this.path} ${name}`;
+
+      debug(`Calling emitter method ${method} with ` +
+        `namespaced event '${eventName}'`);
+
+      const result = this.connection[method](eventName, ...args);
+
+      return result === this.connection ? this : result;
+    };
+  });
+};
 
 export default class Service {
   constructor(options) {
@@ -10,6 +56,8 @@ export default class Service {
     this.connection = options.connection;
     this.method = options.method;
     this.timeout = options.timeout || 5000;
+
+    addEmitterMethods(this);
   }
 
   send(method, ...args) {
@@ -76,47 +124,3 @@ export default class Service {
     return this.removeEventListener(... args);
   }
 }
-
-const namespacedEmitterMethods = [
-  'addListener',
-  'emit',
-  'listenerCount',
-  'listeners',
-  'on',
-  'once',
-  'prependListener',
-  'prependOnceListener',
-  'removeAllListeners',
-  'removeListener'
-];
-
-const otherEmitterMethods = [
-  'eventNames',
-  'getMaxListeners',
-  'setMaxListeners'
-];
-
-otherEmitterMethods.forEach(method => {
-  Service.prototype[method] = function(...args) {
-    if(typeof this.connection[method] !== 'function') {
-      throw new Error(`Can not call method '${method}' on the client connection.`);
-    }
-
-    return this.connection[method](...args);
-  };
-});
-
-namespacedEmitterMethods.forEach(method => {
-  Service.prototype[method] = function(name, ...args) {
-    if(typeof this.connection[method] !== 'function') {
-      throw new Error(`Can not call method '${method}' on the client connection.`);
-    }
-
-    const eventName = `${this.path} ${name}`;
-
-    debug(`Calling emitter method ${method} with namespaced event '${eventName}'`);
-    const result = this.connection[method](eventName, ...args);
-
-    return result === this.connection ? this : result;
-  };
-});
