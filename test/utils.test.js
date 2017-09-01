@@ -1,78 +1,130 @@
-import assert from 'assert';
-import { convertFilterData, promisify, normalizeError, normalizeArgs } from '../src/utils';
+const assert = require('assert');
+const { EventEmitter } = require('events');
+const feathers = require('feathers');
 
-describe('utils', () => {
-  it('convertFilterData', () => {
-    const fn = function () {};
+const {
+  normalizeError,
+  getDispatcher,
+  runMethod
+} = require('../lib/utils');
 
-    assert.deepEqual(convertFilterData(fn), {
-      all: [fn]
+describe('socket commons utils', () => {
+  describe('.normalizeError', () => {
+    it('simple error normalization', () => {
+      const message = 'Something went wrong';
+      const e = new Error(message);
+
+      assert.deepEqual(normalizeError(e), {
+        message,
+        stack: e.stack.toString()
+      });
     });
 
-    assert.deepEqual(convertFilterData({
-      test: fn
-    }), {
-      test: [fn]
+    it('calls .toJSON', () => {
+      const json = { message: 'toJSON called' };
+
+      assert.deepEqual(normalizeError({
+        toJSON () {
+          return json;
+        }
+      }), json);
     });
 
-    assert.deepEqual(convertFilterData({
-      testing: [fn, fn]
-    }), {
-      testing: [fn, fn]
+    it('removes `hook` property', () => {
+      const e = {
+        hook: true
+      };
+
+      assert.deepEqual(normalizeError(e), {});
+      assert.ok(e.hook, 'Does not mutate the original object');
     });
   });
 
-  it('promisify', done => {
-    const context = {};
-    const message = 'a can not be null';
-    const fn = function (a, b, callback) {
-      assert.equal(this, context);
-      if (a === null) {
-        return callback(new Error(message));
-      }
-      callback(null, a + b);
-    };
+  describe('.getDispatcher', () => {
+    it('returns a dispatcher function', () =>
+      assert.equal(typeof getDispatcher(), 'function')
+    );
 
-    promisify(fn, context, 1, 2).then(result => {
-      assert.equal(result, 3);
-      promisify(fn, context, null, null).catch(error => {
-        assert.equal(error.message, message);
-        done();
+    describe('dispatcher logic', () => {
+      let dispatcher, dummySocket, dummyHook, dummyChannel;
+
+      beforeEach(() => {
+        dispatcher = getDispatcher('emit', 'test');
+        dummySocket = new EventEmitter();
+        dummyHook = { result: 'hi' };
+        dummyChannel = {
+          connections: [{
+            test: dummySocket
+          }],
+          dataFor () {
+            return null;
+          }
+        };
+      });
+
+      it('dispatches a basic event', done => {
+        dummySocket.once('testing', data => {
+          assert.equal(data, 'hi');
+          done();
+        });
+
+        dispatcher('testing', dummyChannel, dummyHook);
+      });
+
+      it('dispatches event on a hooks path event', done => {
+        dummyHook.path = 'myservice';
+
+        dummySocket.once('myservice testing', data => {
+          assert.equal(data, 'hi');
+          done();
+        });
+
+        dispatcher('testing', dummyChannel, dummyHook);
+      });
+
+      it('dispatches `hook.dispatch` instead', done => {
+        const message = 'hi from dispatch';
+
+        dummyHook.dispatch = message;
+
+        dummySocket.once('testing', data => {
+          assert.equal(data, message);
+          done();
+        });
+
+        dispatcher('testing', dummyChannel, dummyHook);
+      });
+
+      it('does nothing if there is no socket', () => {
+        dummyChannel.connections[0].test = null;
+
+        dispatcher('testing', dummyChannel, dummyHook);
       });
     });
   });
 
-  it('normalizeError', () => {
-    const e = new Error('Testing');
-    e.hook = 'test';
-    e.expando = true;
+  describe('.runMethod', () => {
+    let app;
 
-    const obj = normalizeError(e);
+    beforeEach(() => {
+      app = feathers().use('/myservice', {
+        get (id) {
+          return Promise.resolve({ id });
+        }
+      });
+    });
 
-    assert.ok(typeof obj === 'object');
-    assert.ok(!(obj instanceof Error));
-    assert.ok(typeof obj.hook === 'undefined');
-    assert.equal(obj.message, 'Testing');
-    assert.equal(obj.expando, true);
-  });
+    it('simple method running', done => {
+      const callback = (error, result) => {
+        if (error) {
+          return done(error);
+        }
 
-  it('normalizeArgs', () => {
-    const usualArgs = [ undefined, { test: true }, function () { } ];
-    const packedArgs = [ [ undefined, { test: true } ], function () { } ];
-    const usualArgsWithArray = [ [ undefined, { test: true } ], {}, function () { } ];
+        assert.deepEqual(result, { id: 10 });
+        done();
+      };
 
-    const normalizedUsualArgs = normalizeArgs(usualArgs);
-    const normalizedPackedArgs = normalizeArgs(packedArgs);
-    const normalizedUsualArgsWithArray = normalizeArgs(usualArgsWithArray);
-
-    assert.equal(usualArgs[0], normalizedUsualArgs[0]);
-    assert.deepEqual(usualArgs[1], normalizedUsualArgs[1]);
-    assert.equal(normalizedUsualArgs.length, 3);
-
-    assert.equal(usualArgs[0], normalizedPackedArgs[0]);
-    assert.deepEqual(usualArgs[1], normalizedPackedArgs[1]);
-    assert.equal(normalizedPackedArgs.length, 3);
-
-    assert.equal(normalizedUsualArgsWithArray.length, 3);
+      runMethod(app, {}, 'myservice', 'get', [ 10, callback ]);
+    });
   });
 });
