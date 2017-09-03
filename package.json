@@ -47,7 +47,8 @@
   "dependencies": {
     "debug": "^3.0.1",
     "feathers-channels": "^0.2.0",
-    "feathers-errors": "^2.9.1"
+    "feathers-errors": "^2.9.1",
+    "url-pattern": "^1.0.3"
   },
   "devDependencies": {
     "feathers": "^3.0.0-pre.1",

@@ -4,7 +4,7 @@ const feathers = require('feathers');
 
 const commons = require('../lib');
 
-describe.only('feathers-socket-commons', () => {
+describe('feathers-socket-commons', () => {
   let provider, options, app, connection;
 
   beforeEach(() => {
@@ -22,12 +22,12 @@ describe.only('feathers-socket-commons', () => {
     app = feathers()
       .configure(commons(options))
       .use('/myservice', {
-        get(id, params) {
+        get (id, params) {
           return Promise.resolve({ id, params });
         },
 
-        create(data) {
-          return Promise.resolve(data);
+        create (data, params) {
+          return Promise.resolve(Object.assign({ params }, data));
         }
       });
 
@@ -52,8 +52,95 @@ describe.only('feathers-socket-commons', () => {
       provider.emit('connection', socket);
 
       socket.emit('get', 'myservice', 10, (error, result) => {
-        console.log(error, result);
-        done();
+        try {
+          assert.ok(!error);
+          assert.deepEqual(result, {
+            id: 10,
+            params: Object.assign({
+              query: {},
+              route: {}
+            }, connection)
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+
+    it('.create with params', done => {
+      const socket = new EventEmitter();
+      const data = {
+        test: 'data'
+      };
+
+      provider.emit('connection', socket);
+
+      socket.emit('create', 'myservice', data, {
+        fromQuery: true
+      }, (error, result) => {
+        try {
+          const params = Object.assign({
+            query: { fromQuery: true },
+            route: {}
+          }, connection);
+
+          assert.ok(!error);
+          assert.deepEqual(result, Object.assign({ params }, data));
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+  });
+
+  describe('legacy method socket event format', () => {
+    it('.get without params', done => {
+      const socket = new EventEmitter();
+
+      provider.emit('connection', socket);
+
+      socket.emit('myservice::get', 10, (error, result) => {
+        try {
+          assert.ok(!error);
+          assert.deepEqual(result, {
+            id: 10,
+            params: Object.assign({
+              query: {},
+              route: {}
+            }, connection)
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+
+    it('.create with params', done => {
+      const socket = new EventEmitter();
+      const data = {
+        test: 'data'
+      };
+
+      provider.emit('connection', socket);
+
+      socket.emit('myservice::create', data, {
+        fromQuery: true
+      }, (error, result) => {
+        const params = Object.assign({
+          query: { fromQuery: true },
+          route: {}
+        }, connection);
+
+        try {
+          assert.ok(!error);
+          assert.deepEqual(result, Object.assign({ params }, data));
+          done();
+        } catch (e) {
+          done(e);
+        }
       });
     });
   });

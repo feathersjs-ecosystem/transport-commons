@@ -1,11 +1,13 @@
 const assert = require('assert');
 const { EventEmitter } = require('events');
 const feathers = require('feathers');
+const errors = require('feathers-errors');
 
 const {
   normalizeError,
   getDispatcher,
-  runMethod
+  runMethod,
+  getService
 } = require('../lib/utils');
 
 describe('socket commons utils', () => {
@@ -103,12 +105,61 @@ describe('socket commons utils', () => {
     });
   });
 
+  describe('.getService', () => {
+    it('simple service', () => {
+      const app = feathers().use('/myservice', {
+        get (id) {
+          return Promise.resolve({ id });
+        }
+      });
+      const { service, route } = getService(app, 'myservice/');
+
+      assert.deepEqual(route, {}, 'There is always a route');
+
+      return service.get(10).then(data =>
+        assert.deepEqual(data, { id: 10 }, 'Got data from service')
+      );
+    });
+
+    it('route with parameter', () => {
+      const app = feathers().use('/users/:userId/comments', {
+        get (id) {
+          return Promise.resolve({ id });
+        }
+      });
+      const { service, route } = getService(app, 'users/10/comments');
+
+      assert.deepEqual(route, {
+        userId: 10
+      }, 'got expected route parameters');
+
+      return service.get(1).then(data =>
+        assert.deepEqual(data, { id: 1 }, 'Got data from service')
+      );
+    });
+
+    it('no service found', () => {
+      const app = feathers().use('/users/:userId/comment', {
+        get (id) {
+          return Promise.resolve({ id });
+        }
+      });
+      const { service, route } = getService(app, 'users/10/comments');
+
+      assert.deepEqual(route, {}, 'route is empty');
+      assert.ok(!service);
+    });
+  });
+
   describe('.runMethod', () => {
     let app;
 
     beforeEach(() => {
       app = feathers().use('/myservice', {
-        get (id) {
+        get (id, params) {
+          if (params.query.error) {
+            return Promise.reject(new errors.NotAuthenticated('None shall pass'));
+          }
           return Promise.resolve({ id });
         }
       });
@@ -125,6 +176,87 @@ describe('socket commons utils', () => {
       };
 
       runMethod(app, {}, 'myservice', 'get', [ 10, callback ]);
+    });
+
+    it('throws NotFound for invalid service', done => {
+      const callback = error => {
+        try {
+          assert.deepEqual(error, { name: 'NotFound',
+            message: 'Service \'ohmyservice\' not found',
+            code: 404,
+            className: 'not-found',
+            data: undefined,
+            errors: {}
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      };
+
+      runMethod(app, {}, 'ohmyservice', 'get', [ 10, callback ]);
+    });
+
+    it('throws MethodNotAllowed undefined method', done => {
+      const callback = error => {
+        try {
+          assert.deepEqual(error, {
+            name: 'MethodNotAllowed',
+            message: 'Method \'create\' not allowed on service \'myservice\'',
+            code: 405,
+            className: 'method-not-allowed',
+            data: undefined,
+            errors: {}
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      };
+
+      runMethod(app, {}, 'myservice', 'create', [ {}, callback ]);
+    });
+
+    it('throws MethodNotAllowed for invalid service method', done => {
+      const callback = error => {
+        try {
+          assert.deepEqual(error, {
+            name: 'MethodNotAllowed',
+            message: 'Method \'blabla\' not allowed on service \'myservice\'',
+            code: 405,
+            className: 'method-not-allowed',
+            data: undefined,
+            errors: {}
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      };
+
+      runMethod(app, {}, 'myservice', 'blabla', [ {}, callback ]);
+    });
+
+    it('method error calls back with normalized error', done => {
+      const callback = (error, result) => {
+        try {
+          assert.deepEqual(error, {
+            name: 'NotAuthenticated',
+            message: 'None shall pass',
+            data: undefined,
+            code: 401,
+            className: 'not-authenticated',
+            errors: {}
+          });
+          done();
+        } catch (e) {
+          done(e);
+        }
+      };
+
+      runMethod(app, {}, 'myservice', 'get', [
+        42, { error: true }, callback
+      ]);
     });
   });
 });
