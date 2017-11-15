@@ -3,7 +3,7 @@
   "description": "Shared functionality for websocket providers",
   "version": "3.0.1",
   "homepage": "https://github.com/feathersjs/socket-commons",
-  "main": "lib/",
+  "main": "lib/index.js",
   "keywords": [
     "feathers",
     "feathers-plugin"
