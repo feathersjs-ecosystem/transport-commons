@@ -112,6 +112,15 @@ describe('socket commons utils', () => {
         dispatcher('testing', dummyChannel, dummyHook);
       });
 
+      it('dispatches nothing if `hook.dispatch` set to falsy', done => {
+        dummyHook.dispatch = null;
+
+        dummySocket.once('testing', data => done(new Error('should never get here')));
+
+        dispatcher('testing', dummyChannel, dummyHook);
+        done();
+      });
+
       it('does nothing if there is no socket', () => {
         dummyChannel.connections[0].test = null;
 
