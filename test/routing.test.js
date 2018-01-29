@@ -15,8 +15,7 @@ describe('app.router', () => {
     });
   });
 
-  it('has app.router and app.lookup', () => {
-    assert.ok(app.router);
+  it('has app.lookup', () => {
     assert.equal(typeof app.lookup, 'function');
   });
 
