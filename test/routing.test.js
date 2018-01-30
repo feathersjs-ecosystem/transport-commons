@@ -15,8 +15,9 @@ describe('app.router', () => {
     });
   });
 
-  it('has app.lookup', () => {
+  it('has app.lookup and ROUTER symbol', () => {
     assert.equal(typeof app.lookup, 'function');
+    assert.ok(app[routing.ROUTER]);
   });
 
   it('returns null when nothing is found', () => {
