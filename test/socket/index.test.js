@@ -2,7 +2,7 @@ const assert = require('assert');
 const { EventEmitter } = require('events');
 const feathers = require('@feathersjs/feathers');
 
-const commons = require('../lib/socket');
+const commons = require('../../lib/socket');
 
 describe('@feathersjs/transport-commons', () => {
   let provider, options, app, connection;
