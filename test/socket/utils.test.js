@@ -68,10 +68,7 @@ describe('socket commons utils', () => {
       beforeEach(() => {
         dispatcher = getDispatcher('emit', 'test');
         dummySocket = new EventEmitter();
-        dummyHook = {
-          service: {},
-          result: 'hi'
-        };
+        dummyHook = { result: 'hi' };
         dummyChannel = {
           connections: [{
             test: dummySocket
@@ -125,7 +122,6 @@ describe('socket commons utils', () => {
         const data1 = { message: 'First message' };
         const data2 = { message: 'Second message' };
 
-        dummyHook.service._hookEvents = [ 'testing' ];
         dummyHook.result = [ data1, data2 ];
 
         dummySocket.once('testing', data => {
