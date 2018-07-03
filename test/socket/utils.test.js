@@ -121,7 +121,7 @@ describe('socket commons utils', () => {
         dispatcher('testing', dummyChannel, dummyHook);
       });
 
-      it('dispatches arrays separately for hook events', done => {
+      it('dispatches arrays properly hook events', done => {
         const data1 = { message: 'First message' };
         const data2 = { message: 'Second message' };
 
