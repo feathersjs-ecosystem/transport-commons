@@ -68,7 +68,10 @@ describe('socket commons utils', () => {
       beforeEach(() => {
         dispatcher = getDispatcher('emit', 'test');
         dummySocket = new EventEmitter();
-        dummyHook = { result: 'hi' };
+        dummyHook = {
+          service: {},
+          result: 'hi'
+        };
         dummyChannel = {
           connections: [{
             test: dummySocket
@@ -118,10 +121,11 @@ describe('socket commons utils', () => {
         dispatcher('testing', dummyChannel, dummyHook);
       });
 
-      it('dispatches arrays properly', done => {
+      it('dispatches arrays separately for hook events', done => {
         const data1 = { message: 'First message' };
         const data2 = { message: 'Second message' };
 
+        dummyHook.service._hookEvents = [ 'testing' ];
         dummyHook.result = [ data1, data2 ];
 
         dummySocket.once('testing', data => {
@@ -134,6 +138,22 @@ describe('socket commons utils', () => {
 
         dispatcher('testing', dummyChannel, dummyHook, data1);
         dispatcher('testing', dummyChannel, dummyHook, data2);
+      });
+
+      it('dispatches arrays properly for custom events', done => {
+        const result = [
+          { message: 'First' },
+          { message: 'Second' }
+        ];
+
+        dummyHook.result = result;
+
+        dummySocket.once('otherEvent', data => {
+          assert.deepEqual(data, result);
+          done();
+        });
+
+        dispatcher('otherEvent', dummyChannel, dummyHook, result);
       });
     });
   });
