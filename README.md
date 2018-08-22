@@ -1,14 +1,10 @@
 # @feathersjs/transport-commons
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/feathersjs/transport-commons.svg)](https://greenkeeper.io/)
+> __Important:__ The code for this module has been moved into the main Feathers repository at [feathersjs/feathers](https://github.com/feathersjs/feathers) ([package direct link](https://github.com/feathersjs/feathers/tree/master/packages/transport-commons)). Please open issues and pull requests there.
 
 [![Build Status](https://travis-ci.org/feathersjs/transport-commons.png?branch=master)](https://travis-ci.org/feathersjs/transport-commons)
-[![Maintainability](https://api.codeclimate.com/v1/badges/87c506753cb9fc6a8b87/maintainability)](https://codeclimate.com/github/feathersjs/transport-commons/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/87c506753cb9fc6a8b87/test_coverage)](https://codeclimate.com/github/feathersjs/transport-commons/test_coverage)
-[![Dependency Status](https://img.shields.io/david/feathersjs/transport-commons.svg?style=flat-square)](https://david-dm.org/feathersjs/transport-commons)
-[![Download Status](https://img.shields.io/npm/dm/@feathersjs/transport-commons.svg?style=flat-square)](https://www.npmjs.com/package/@feathersjs/transport-commons)
 
-> Shared functionality for Feathers API transports like [@feathers/socketio](https://github.com/feathersjs/socketio) and [@feathersjs/primus](https://github.com/feathersjs/primus). Only intended to be used internally.
+Shared functionality for Feathers API transports like [@feathers/socketio](https://github.com/feathersjs/socketio) and [@feathersjs/primus](https://github.com/feathersjs/primus). Only intended to be used internally.
 
 ## About
 
